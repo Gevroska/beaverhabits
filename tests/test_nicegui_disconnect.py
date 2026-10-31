@@ -10,7 +10,9 @@ from nicegui.nicegui import _on_connect, _on_disconnect, _on_handshake
 from starlette.requests import Request
 
 
-@pytest.mark.parametrize("query_mode", ["missing", "empty", "other_client", "implicit"])
+@pytest.mark.parametrize(
+    "query_mode", ["missing", "empty", "other_client", "implicit", "replayed"]
+)
 async def test_socket_disconnect_releases_client(user, query_mode):
     """Use real Socket.IO rooms, including payload-only and misleading query IDs."""
     request = Request(
@@ -32,6 +34,7 @@ async def test_socket_disconnect_releases_client(user, query_mode):
         payload = {"client_id": client.id, "tab_id": tab_id, "document_id": document_id}
         query = {
             "missing": "",
+            "replayed": "",
             "empty": "client_id=",
             "other_client": f"client_id={uuid4()}",
             "implicit": f"implicit_handshake=true&client_id={client.id}&tab_id={tab_id}&document_id={document_id}",
@@ -43,13 +46,26 @@ async def test_socket_disconnect_releases_client(user, query_mode):
         core.sio.environ[transport_id] = environ
         await _on_connect(sid, environ)
         if query_mode != "implicit":
-            assert await _on_handshake(sid, payload)
+            accepted = await _on_handshake(sid, payload)
+            if query_mode == "other_client":
+                assert not accepted
+                assert not client.has_socket_connection
+                assert client.id not in core.sio.rooms(sid)
+                Client.prune_instances(client_age_threshold=0)
+                assert client.id not in Client.instances
+                return None
+            assert accepted
+        if query_mode == "replayed":
+            # A repeated frame must not register a second connection for this sid.
+            await _on_handshake(sid, payload)
         assert client.id in core.sio.rooms(sid)
         assert client.has_socket_connection
         return sid
 
     try:
         first_sid = await connect()
+        if first_sid is None:
+            return
         _on_disconnect(first_sid)
         await core.sio.manager.disconnect(first_sid, "/")
         assert not client.has_socket_connection
