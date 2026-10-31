@@ -56,10 +56,12 @@ jobs:
       - name: Smoke-test login, data, and restart persistence
         env:
           EXPECTED_REVISION: ${{ github.sha }}
+          SMOKE_STORAGE_SECRET: disposable-container-cookie-test-secret
         run: |
           uv sync --locked --no-dev --no-install-project
           docker run -d --name beaverhabits-smoke --memory=512m --cpus=1 \
-            -p 127.0.0.1:18080:8080 -e HABITS_STORAGE=DATABASE -e MAX_USER_COUNT=1 "$IMAGE"
+            -p 127.0.0.1:18080:8080 -e HABITS_STORAGE=DATABASE -e MAX_USER_COUNT=1 \
+            -e NICEGUI_STORAGE_SECRET="$SMOKE_STORAGE_SECRET" "$IMAGE"
           uv run --no-sync python tests/smoke_container.py seed
           docker restart --timeout 30 beaverhabits-smoke
           uv run --no-sync python tests/smoke_container.py verify

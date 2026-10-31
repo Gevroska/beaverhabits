@@ -51,6 +51,7 @@ class Settings(BaseSettings):
 
     # NiceGUI
     NICEGUI_STORAGE_SECRET: str = "dev"
+    SESSION_COOKIE_SECURE: bool = True
     GUI_MOUNT_PATH: str = "/gui"
     DEMO_MOUNT_PATH: str = "/demo"
     DARK_MODE: bool | None = None
