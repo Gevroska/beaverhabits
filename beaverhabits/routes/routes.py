@@ -339,6 +339,10 @@ def init_gui_routes(fastapi_app: FastAPI):
     @app.middleware("http")
     async def AuthMiddleware(request: Request, call_next):
         logger.debug(f"AuthMiddleware: {request.url.path}")
+        # Reissue legacy cookies once without changing their user-storage ID.
+        cookie_policy = "secure-v1" if settings.SESSION_COOKIE_SECURE else "http-v1"
+        if request.session.get("bh_cookie_policy") != cookie_policy:
+            request.session["bh_cookie_policy"] = cookie_policy
         if token := app.storage.user.get("auth_token"):
             # Remove original authorization header
             request.scope["headers"] = [
@@ -376,6 +380,7 @@ def init_gui_routes(fastapi_app: FastAPI):
         fastapi_app,
         title=const.PAGE_TITLE,
         storage_secret=settings.NICEGUI_STORAGE_SECRET,
+        session_middleware_kwargs={"https_only": settings.SESSION_COOKIE_SECURE},
         favicon="statics/images/favicon.svg",
         dark=settings.DARK_MODE,
         reconnect_timeout=10,

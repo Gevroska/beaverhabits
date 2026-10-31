@@ -34,6 +34,15 @@ Zero configuration, high availability, and low latency powered by global edge ne
 
 ## Self-Hosting
 
+In this fork, session cookies require HTTPS by default. This works behind an HTTPS reverse
+proxy even when its private connection to the container uses HTTP. Existing
+sessions receive the updated cookie on their next GUI HTTP request, retaining
+their sign-in and user data.
+
+For an explicitly plain-HTTP development or local deployment, set
+`SESSION_COOKIE_SECURE=false`. Browsers otherwise withhold the session cookie
+over HTTP. `HttpOnly` and `SameSite=Lax` remain enabled in either mode.
+
 ### Unraid
 
 Simply search for "Beaver Habit Tracker" in the Community Apps store!
@@ -44,9 +53,10 @@ Simply search for "Beaver Habit Tracker" in the Community Apps store!
 docker run -d --name beaverhabits \
   -u $(id -u):$(id -g) \
   -e HABITS_STORAGE=USER_DISK \
+  -e SESSION_COOKIE_SECURE=false \
   -v ./beaver/:/app/.user/ \
   -p 8080:8080 \
-  daya0576/beaverhabits:latest
+  ghcr.io/gevroska/beaverhabits:latest
 ```
 
 Or Docker Compose:
@@ -59,6 +69,7 @@ services:
       # See the link below to find all the environment variables
       # https://github.com/daya0576/beaverhabits/wiki/Environment-variables
       - HABITS_STORAGE=USER_DISK # DATABASE stores in a single SQLite database named habits.db. USER_DISK option saves in a local json file.
+      - SESSION_COOKIE_SECURE=false # Plain HTTP only; use true behind HTTPS.
       - TRUSTED_LOCAL_EMAIL=your@email.com # Skip authentication
       - INDEX_HABIT_DATE_COLUMNS=5 # Customize the date columns for the index page.
       - ENABLE_IOS_STANDALONE=true
@@ -67,7 +78,7 @@ services:
     ports:
       - 8080:8080
     restart: unless-stopped
-    image: daya0576/beaverhabits:latest
+    image: ghcr.io/gevroska/beaverhabits:latest
 ```
 
 P.S. The container starts as nobody to increase the security and make it OpenShift compatible.

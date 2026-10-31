@@ -1,11 +1,43 @@
 """Check the built production container with disposable data, before and after restart."""
 
+import base64
+import json
 import os
 import sys
 import time
+from http.cookies import SimpleCookie
+from uuid import uuid4
 
 import httpx
 import nicegui
+from itsdangerous import TimestampSigner
+
+
+def check_session_cookies(client):
+    """Check new and legacy browser cookies on the actual production image."""
+    signer = TimestampSigner(os.environ["SMOKE_STORAGE_SECRET"])
+
+    def cookie_from(response):
+        cookies = SimpleCookie()
+        for header in response.headers.get_list("set-cookie"):
+            cookies.load(header)
+        cookie = cookies["session"]
+        assert cookie["secure"] and cookie["httponly"]
+        assert cookie["samesite"].lower() == "lax"
+        return cookie.value
+
+    response = client.get("/login")
+    assert response.status_code == 200
+    cookie_from(response)
+    session = {"id": str(uuid4()), "preserved": "legacy-smoke-session"}
+    legacy = signer.sign(base64.b64encode(json.dumps(session).encode())).decode()
+    response = client.get("/login", headers={"Cookie": f"session={legacy}"})
+    migrated = cookie_from(response)
+    decoded = json.loads(base64.b64decode(signer.unsign(migrated)))
+    assert decoded == {**session, "bh_cookie_policy": "secure-v1"}
+    response = client.get("/login", headers={"Cookie": f"session={migrated}"})
+    assert response.status_code == 200
+    assert not response.headers.get_list("set-cookie")
 
 
 def main():
@@ -25,7 +57,7 @@ def main():
         assert (
             health["identity"] == f"beaverhabits/fork@{os.environ['EXPECTED_REVISION']}"
         )
-        assert client.get("/login").status_code == 200
+        check_session_cookies(client)
         credentials = {
             "email": "smoke@example.com",
             "password": "DisposableSmokePassword123!",
@@ -53,7 +85,9 @@ def main():
         assert (
             len(habits) == 1 and habits[0]["name"] == "Persistent smoke habit"
         ), habits
-        print(f"{sys.argv[1]}: health, version, login, and habit data passed")
+        print(
+            f"{sys.argv[1]}: health, version, secure/legacy cookies, login, and habit data passed"
+        )
 
 
 if __name__ == "__main__":
