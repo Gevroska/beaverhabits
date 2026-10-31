@@ -6,6 +6,7 @@ on:
 
 jobs:
   pre-deploy-test:
+    if: github.repository == 'daya0576/beaverhabits'
     uses: ./.github/workflows/pre-deployment-test.yml
 
   deploy:

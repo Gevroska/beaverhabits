@@ -3,19 +3,22 @@ name: Pre-deployment Test
 on:
   workflow_call:
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Install the latest version of uv and set the python version
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@e4db8464a088ece1b920f60402e813ea4de65b8f # v4
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-          version: "0.9.18"
+          version: "0.13.0"
           python-version: "3.14"
       - name: Install dependencies
-        run: uv sync --group fly
+        run: uv sync --locked --group fly
       - name: Test with python
-        run: DATABASE_URL="sqlite+aiosqlite:///:memory:" HABITS_STORAGE="USER_DISK" uv run pytest
+        run: DATABASE_URL="sqlite+aiosqlite:///:memory:" HABITS_STORAGE="USER_DISK" uv run --frozen pytest

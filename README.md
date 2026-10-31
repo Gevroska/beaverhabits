@@ -74,6 +74,22 @@ P.S. The container starts as nobody to increase the security and make it OpenShi
 To avoid [permission issues](https://github.com/daya0576/beaverhabits/discussions/31), ensure that the UID owning the host folder aligns with the UID of the user inside the container.
 
 
+## Fork container builds
+
+This fork publishes `ghcr.io/gevroska/beaverhabits:sha-<full-commit>` on branch
+pushes and manual runs of **Build fork container**. It reuses `docker/Dockerfile`
+and the locked dependencies. The workflow runs the test suite, builds for
+`linux/amd64`, and checks login, habit creation, and persistence after a container
+restart before publishing the same tested image. No Docker Hub credentials are
+needed; publishing uses the workflow's scoped `GITHUB_TOKEN`.
+
+After the first publication, make the GHCR package public if anonymous pulls are
+required. The workflow summary includes the image digest. Review the associated
+commit and successful workflow before deploying
+`ghcr.io/gevroska/beaverhabits@sha256:<digest>`. Keep automatic redeployment off
+when updates require review. Builds do not deploy the application or move a
+`latest` tag. Retain the existing persistent data mount when changing images.
+
 ## Development
 
 BeaverHabits favors [uv](https://docs.astral.sh/uv/getting-started/) as package management tool. Here is how to set up the development environment:

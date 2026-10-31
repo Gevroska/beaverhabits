@@ -11,6 +11,7 @@ on:
 
 jobs:
     copilot-setup-steps:
+        if: github.repository == 'daya0576/beaverhabits'
         runs-on: ubuntu-latest
 
         permissions:
