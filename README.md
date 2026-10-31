@@ -92,7 +92,12 @@ required. The workflow summary includes the image digest. Review the associated
 commit and successful workflow before deploying
 `ghcr.io/gevroska/beaverhabits@sha256:<digest>`. Keep automatic redeployment off
 when updates require review. Builds do not deploy the application or move a
-`latest` tag. Retain the existing persistent data mount when changing images.
+`latest` tag. To update `latest`, run **Promote reviewed image to latest** on
+`main` with the reviewed digest. This copies the existing manifest without
+rebuilding and verifies that `latest` resolves to the same digest. Experimental
+branch builds therefore cannot overwrite `latest`. The image name
+`ghcr.io/gevroska/beaverhabits` defaults to `:latest`; it works after the first
+promotion. Retain the existing persistent data mount when changing images.
 
 ## Development
 

@@ -1,0 +1,52 @@
+name: Promote reviewed image to latest
+
+on:
+  workflow_dispatch:
+    inputs:
+      digest:
+        description: "Reviewed image digest (sha256 followed by 64 lowercase hex characters)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: beaverhabits-latest-promotion
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    if: github.repository == 'Gevroska/beaverhabits' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE: ghcr.io/gevroska/beaverhabits
+      SOURCE_DIGEST: ${{ inputs.digest }}
+    steps:
+      - name: Validate the reviewed digest
+        run: |
+          [[ "$SOURCE_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]] || {
+            echo 'A complete sha256 image digest is required.' >&2
+            exit 1
+          }
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Promote without rebuilding
+        run: |
+          set -euo pipefail
+          docker buildx imagetools create --prefer-index=false \
+            --tag "$IMAGE:latest" "$IMAGE@$SOURCE_DIGEST"
+          ACTUAL_DIGEST=$(docker buildx imagetools inspect "$IMAGE:latest" \
+            --format '{{json .Manifest}}' | jq -er '.digest')
+          test "$ACTUAL_DIGEST" = "$SOURCE_DIGEST"
+          printf '### Reviewed image promoted\n\n`%s:latest`\n\nDigest: `%s`\n' \
+            "$IMAGE" "$ACTUAL_DIGEST" >> "$GITHUB_STEP_SUMMARY"
