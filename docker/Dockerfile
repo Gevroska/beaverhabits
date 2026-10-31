@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR $PYSETUP_PATH
-ADD https://astral.sh/uv/0.5.26/install.sh /uv-installer.sh
+ADD https://astral.sh/uv/0.13.0/install.sh /uv-installer.sh
 RUN sh /uv-installer.sh && rm /uv-installer.sh
 ENV PATH="/root/.local/bin/:$PATH"
 
@@ -39,6 +39,7 @@ COPY start.sh .
 COPY beaverhabits ./beaverhabits
 COPY statics ./statics
 COPY healthcheck.py .
+COPY LICENSE .
 RUN chmod -R g+w /app && \
     chown -R nobody /app
 USER nobody

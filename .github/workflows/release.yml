@@ -5,6 +5,7 @@ env:
 
 jobs:
   test:
+    if: github.repository == 'daya0576/beaverhabits'
     uses: ./.github/workflows/pre-deployment-test.yml
 
   # https://docs.docker.com/build/ci/github-actions/multi-platform/#distribute-build-across-multiple-runners
